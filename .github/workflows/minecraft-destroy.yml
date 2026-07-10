@@ -1,5 +1,9 @@
 name: Destroy Minecraft Server
 
+defaults:
+  run:
+    working-directory: mc-deploy
+
 on:
   workflow_dispatch:
     inputs:
