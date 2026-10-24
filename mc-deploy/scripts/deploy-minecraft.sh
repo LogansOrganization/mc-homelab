@@ -253,5 +253,5 @@ echo "=================================================="
   echo "| **Friends connect to** | \`${PUBLIC_LINE}\` |"
   echo "| On your home network | \`${LB_IP}:${PORT}\` |"
   echo "| World | $([ -n "$OLD_PV" ] && echo "reused the kept world" || echo "new, ${WORLD_SIZE}") |"
-  [ "$EDITION" = bedrock ] && echo "| Bedrock | Servers tab → Add Server → address + port above |"
+  if [ "$EDITION" = bedrock ]; then echo "| Bedrock | Servers tab → Add Server → address + port above |"; fi
 } >> "$SUMMARY"

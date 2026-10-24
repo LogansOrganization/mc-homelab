@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lists running Minecraft servers and kept worlds, as a table in the job summary.
 set -euo pipefail
-SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 LB_IP="192.168.10.242"
 PUBLIC_IP=$(homelab-port public-ip 2>/dev/null || echo "?")
 
@@ -25,4 +25,4 @@ PUBLIC_IP=$(homelab-port public-ip 2>/dev/null || echo "?")
   kept=$(kubectl get pv -l mc-world -o json | jq -r '.items[] | select(.status.phase == "Released") |
     "- `\(.metadata.labels["mc-world"])` (\(.metadata.labels["mc-edition"] // "java"), \(.spec.capacity.storage))"')
   echo "${kept:-none}"
-} >> "$SUMMARY"
+} | tee -a "$SUMMARY"
