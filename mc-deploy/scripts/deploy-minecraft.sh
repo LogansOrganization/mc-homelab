@@ -146,6 +146,8 @@ metadata:
   namespace: ${NAMESPACE}
 spec:
   replicas: 1
+  # First boot of a big modpack can take a long time; don't call it stuck after the 10 min default.
+  progressDeadlineSeconds: 1800
   strategy:
     type: Recreate
   selector:
@@ -167,9 +169,10 @@ spec:
           volumeMounts:
             - name: world
               mountPath: /data
+          # Reserve half a core (the worker has 4), burst to 4 when it's busy.
           resources:
             requests:
-              cpu: "1"
+              cpu: 500m
               memory: "${MEM_GB}Gi"
             limits:
               cpu: "4"
