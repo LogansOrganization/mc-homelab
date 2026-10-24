@@ -8,30 +8,26 @@ on:
   workflow_dispatch:
     inputs:
       server_name:
-        description: 'Server name to tear down (must match the name used at deploy time)'
+        description: 'Server name to tear down'
         required: true
         type: string
+      delete_world:
+        description: 'Also delete the world for good (otherwise it is kept for next time)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: minecraft
+  cancel-in-progress: false
 
 jobs:
   destroy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure in-cluster kubectl access
-        run: |
-          if ! command -v kubectl >/dev/null 2>&1; then
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-          fi
-          kubectl config set-cluster in-cluster --server=https://kubernetes.default.svc --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          kubectl config set-credentials sa --token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-          kubectl config set-context in-cluster --cluster=in-cluster --user=sa --namespace=default
-          kubectl config use-context in-cluster
-
+      - uses: actions/checkout@v5
       - name: Destroy server
         env:
           SERVER_NAME: ${{ inputs.server_name }}
-        run: |
-          chmod +x ./scripts/destroy-minecraft.sh
-          ./scripts/destroy-minecraft.sh | tee "$GITHUB_STEP_SUMMARY"
+          DELETE_WORLD: ${{ inputs.delete_world }}
+        run: bash ./scripts/destroy-minecraft.sh

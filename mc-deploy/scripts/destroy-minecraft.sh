@@ -1,33 +1,39 @@
 #!/usr/bin/env bash
+# Tears down one Minecraft server: closes its router port, deletes its namespace.
+# The world is kept (longhorn-retain) unless DELETE_WORLD=true. Deploying the same name again
+# brings the kept world back.
+#
+# Inputs (env): SERVER_NAME, DELETE_WORLD (true|false)
 set -euo pipefail
 
-# SERVER_NAME - the name used when the server was deployed
-
 SERVER_NAME="${SERVER_NAME:?SERVER_NAME is required}"
-SERVER_NAME=$(echo "$SERVER_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' '-' | sed 's/^-*//;s/-*$//')
+DELETE_WORLD="${DELETE_WORLD:-false}"
+SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
+SERVER_NAME=$(echo "$SERVER_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' '-' | sed 's/^-*//;s/-*$//' | cut -c1-40)
 NAMESPACE="mc-${SERVER_NAME}"
 
+PV=$(kubectl get pv -l "mc-world=${SERVER_NAME}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
 if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
-  echo "ERROR: No server named '${SERVER_NAME}' found (namespace ${NAMESPACE} does not exist)."
-  exit 1
+  [ "$DELETE_WORLD" = true ] && [ -n "$PV" ] || { echo "ERROR: no server named '${SERVER_NAME}'." >&2; exit 1; }
+  echo "Server '${SERVER_NAME}' isn't running; only deleting its kept world."
 fi
 
-# Grab the PV name before we delete anything, so we can tell the user where their world lives
-PVC_UID=$(kubectl get pvc world-data -n "$NAMESPACE" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
+echo "== Tearing down '${SERVER_NAME}' =="
+homelab-port close "$NAMESPACE" || echo "::warning::Couldn't close the router port for ${NAMESPACE}; check homelab-port list."
+kubectl delete namespace "$NAMESPACE" --ignore-not-found --timeout=180s
 
-echo "== Tearing down server: ${SERVER_NAME} =="
-kubectl delete namespace "$NAMESPACE" --timeout=120s
-
-echo ""
-echo "=================================================="
-echo " Server '${SERVER_NAME}' has been removed."
-if [ -n "$PVC_UID" ]; then
-  echo " World data is preserved (Longhorn Retain policy)."
-  echo " Underlying volume: ${PVC_UID}"
-  echo " It will show as 'Released' in 'kubectl get pv' or the Longhorn UI."
-  echo " Redeploying a server with the SAME name will get a fresh volume, not this one -"
-  echo " to reuse this exact world, you'd need to manually bind a new PVC to this PV."
-else
-  echo " (Could not determine the world's volume name - check 'kubectl get pv' manually.)"
+WORLD_LINE="kept. Deploy the name '${SERVER_NAME}' again to get it back"
+if [ "$DELETE_WORLD" = true ] && [ -n "$PV" ]; then
+  # The PV is Released and kept (Retain). Switching it to Delete makes Kubernetes remove it and
+  # its Longhorn volume, freeing the disk space.
+  kubectl patch pv "$PV" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}' >/dev/null
+  kubectl wait --for=delete "pv/$PV" --timeout=120s || echo "::warning::World volume ${PV} is still being deleted."
+  WORLD_LINE="deleted"
 fi
-echo "=================================================="
+
+echo "Server '${SERVER_NAME}' removed. World: ${WORLD_LINE}."
+{
+  echo "## Minecraft server \`${SERVER_NAME}\` removed"
+  echo ""
+  echo "World: ${WORLD_LINE}."
+} >> "$SUMMARY"

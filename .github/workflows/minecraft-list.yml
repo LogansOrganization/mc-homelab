@@ -1,0 +1,13 @@
+name: List Minecraft Servers
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: List
+        run: bash ./mc-deploy/scripts/list-minecraft.sh

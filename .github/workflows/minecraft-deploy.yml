@@ -8,66 +8,64 @@ on:
   workflow_dispatch:
     inputs:
       server_name:
-        description: 'Server name (lowercase letters/numbers/hyphens only, used to identify it later for teardown)'
+        description: 'Server name (letters, numbers, hyphens). Reusing a destroyed server''s name brings its world back.'
         required: true
         type: string
-      mc_version:
-        description: 'Minecraft version (e.g. 1.21.1, or "latest")'
-        required: true
-        default: 'latest'
-        type: string
-      mod_loader:
-        description: 'Mod loader'
-        required: true
+      edition:
+        description: 'Edition'
         type: choice
-        options:
-          - vanilla
-          - paper
-          - forge
-          - fabric
-          - quilt
+        options: [java, bedrock]
+        default: java
+      type:
+        description: 'Server type (Java only). "modrinth" = a Modrinth modpack, set it below.'
+        type: choice
+        options: [vanilla, paper, purpur, fabric, forge, neoforge, quilt, modrinth]
         default: vanilla
+      mc_version:
+        description: 'Minecraft version, e.g. 1.21.1, or "latest"'
+        required: true
+        default: latest
+        type: string
       mods:
-        description: 'Comma-separated URLs to mod/plugin jars (leave blank for none, ignored for vanilla)'
+        description: 'Mods/plugins, comma-separated: jar URLs and/or Modrinth project names (e.g. lithium,sodium)'
         required: false
         type: string
-      world_size:
-        description: 'World storage size'
+      modpack:
+        description: 'Modrinth modpack slug or URL (only for type "modrinth")'
         required: false
-        default: '10Gi'
         type: string
       memory:
-        description: 'Memory allocated to the server (e.g. 4G)'
-        required: false
-        default: '4G'
+        description: 'Memory for the server, e.g. 4G'
+        default: 4G
         type: string
+      world_size:
+        description: 'World storage, e.g. 10Gi (ignored when reusing a kept world)'
+        default: 10Gi
+        type: string
+      public:
+        description: 'Open it to the internet (router port forward)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: minecraft
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure in-cluster kubectl access
-        run: |
-          if ! command -v kubectl >/dev/null 2>&1; then
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-          fi
-          command -v envsubst >/dev/null 2>&1 || (apt-get update && apt-get install -y gettext-base)
-          kubectl config set-cluster in-cluster --server=https://kubernetes.default.svc --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          kubectl config set-credentials sa --token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-          kubectl config set-context in-cluster --cluster=in-cluster --user=sa --namespace=default
-          kubectl config use-context in-cluster
-
+      - uses: actions/checkout@v5
       - name: Deploy server
         env:
           SERVER_NAME: ${{ inputs.server_name }}
+          EDITION: ${{ inputs.edition }}
+          TYPE: ${{ inputs.type }}
           MC_VERSION: ${{ inputs.mc_version }}
-          MOD_LOADER: ${{ inputs.mod_loader }}
           MODS: ${{ inputs.mods }}
-          WORLD_SIZE: ${{ inputs.world_size }}
+          MODPACK: ${{ inputs.modpack }}
           MEMORY: ${{ inputs.memory }}
-        run: |
-          chmod +x ./scripts/deploy-minecraft.sh
-          ./scripts/deploy-minecraft.sh | tee "$GITHUB_STEP_SUMMARY"
+          WORLD_SIZE: ${{ inputs.world_size }}
+          PUBLIC: ${{ inputs.public }}
+        run: bash ./scripts/deploy-minecraft.sh
