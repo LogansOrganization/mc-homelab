@@ -61,10 +61,24 @@ if [ -n "$OLD_PV" ]; then
   echo "Reusing the kept world on ${OLD_PV} (${WORLD_SIZE})"
 fi
 
+# ---- Server settings (from the panel/preset; checked against settings-schema.json) ----
+source "$(dirname "$0")/settings.sh"
+SETTINGS_LINES=$(validate_settings "$EDITION" "${SETTINGS:-}") || die "settings rejected (see the error above)"
+declare -A CHOSEN=()
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  [ -n "${line#*=}" ] && CHOSEN["${line%%=*}"]="${line#*=}"
+done <<< "$SETTINGS_LINES"
+# Kept on the namespace so the panel can show and edit them later.
+SETTINGS_JSON=$(for k in "${!CHOSEN[@]}"; do printf '%s\t%s\n' "$k" "${CHOSEN[$k]}"; done |
+  jq -Rsc 'split("\n") | map(select(. != "") | split("\t") | {(.[0]): .[1]}) | add // {}')
+
 # ---- Image + settings per edition/type ----
 ENV_YAML=""
 add_env() { ENV_YAML+=$'\n'"            - name: $1"$'\n'"              value: $(jq -Rn --arg v "$2" '$v')"; }
+default_env() { [ -n "${CHOSEN[$1]:-}" ] || add_env "$1" "$2"; }   # only if the settings didn't set it
 add_env EULA "TRUE"
+for k in "${!CHOSEN[@]}"; do add_env "$k" "${CHOSEN[$k]}"; done
 if [ "$EDITION" = java ]; then
   # Old Minecraft needs old Java; the image tag picks the JVM.
   TAG=latest
@@ -84,7 +98,7 @@ if [ "$EDITION" = java ]; then
   add_env VERSION "$MC_VERSION"
   add_env MEMORY "${MEM_GB}G"
   add_env USE_AIKAR_FLAGS "true"
-  add_env MOTD "${SERVER_NAME} (homelab)"
+  default_env MOTD "${SERVER_NAME} (homelab)"
   # Mods: URLs go to MODS (or PLUGINS for Paper/Purpur), plain names are Modrinth projects.
   if [ -n "$MODS" ]; then
     [ "$TYPE_UPPER" != VANILLA ] || die "vanilla can't load mods. Pick paper/fabric/forge/... instead"
@@ -103,7 +117,7 @@ if [ "$EDITION" = java ]; then
 else
   IMAGE="itzg/minecraft-bedrock-server:latest"
   add_env VERSION "$([ "$MC_VERSION" = latest ] && echo LATEST || echo "$MC_VERSION")"
-  add_env SERVER_NAME "${SERVER_NAME} (homelab)"
+  default_env SERVER_NAME "${SERVER_NAME} (homelab)"
   [ -z "$MODS$MODPACK" ] || echo "WARNING: Bedrock doesn't take Java mods/modpacks, ignoring them."
   PROBE="exec:
               command: [\"mc-monitor\", \"status-bedrock\", \"--host\", \"127.0.0.1\", \"--port\", \"${CONTAINER_PORT}\"]"
@@ -125,6 +139,10 @@ metadata:
   annotations:
     mc-type: "${TYPE}"
     mc-version: "${MC_VERSION}"
+    mc-memory: "${MEM_GB}G"
+    mc-mods: $(jq -Rn --arg v "$MODS" '$v')
+    mc-modpack: $(jq -Rn --arg v "$MODPACK" '$v')
+    mc-settings: $(jq -Rn --arg v "$SETTINGS_JSON" '$v')
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

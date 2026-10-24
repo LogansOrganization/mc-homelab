@@ -1,4 +1,5 @@
 name: Deploy Minecraft Server
+run-name: "deploy ${{ inputs.server_name }} (${{ inputs.edition }} ${{ inputs.type }} ${{ inputs.mc_version }})"
 
 defaults:
   run:
@@ -46,9 +47,15 @@ on:
         description: 'Open it to the internet (router port forward)'
         type: boolean
         default: true
+      settings:
+        description: 'Server settings as JSON (difficulty, game mode, whitelist...). See mc-deploy/settings-schema.json'
+        required: false
+        default: '{}'
+        type: string
 
+# One deploy at a time, so two new servers never pick the same port.
 concurrency:
-  group: minecraft
+  group: minecraft-deploy
   cancel-in-progress: false
 
 jobs:
@@ -68,4 +75,5 @@ jobs:
           MEMORY: ${{ inputs.memory }}
           WORLD_SIZE: ${{ inputs.world_size }}
           PUBLIC: ${{ inputs.public }}
+          SETTINGS: ${{ inputs.settings }}
         run: bash ./scripts/deploy-minecraft.sh

@@ -1,0 +1,31 @@
+name: Start / Stop / Restart Minecraft Server
+run-name: "${{ inputs.action }} ${{ inputs.server_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: 'Server name'
+        required: true
+        type: string
+      action:
+        description: 'What to do'
+        type: choice
+        options: [start, stop, restart]
+        default: restart
+
+concurrency:
+  group: minecraft-${{ inputs.server_name }}
+  cancel-in-progress: false
+
+jobs:
+  power:
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: ${{ inputs.action }}
+        env:
+          SERVER_NAME: ${{ inputs.server_name }}
+          ACTION: ${{ inputs.action }}
+        run: bash ./mc-deploy/scripts/power-minecraft.sh

@@ -1,0 +1,35 @@
+{
+  "_comment": "Server settings the panel and the deploy/configure workflows accept. Keys are itzg image env vars. Both read this file, so add a setting here and it shows up everywhere.",
+  "java": {
+    "MOTD":                 { "label": "Message of the day", "type": "string", "max": 120 },
+    "DIFFICULTY":           { "label": "Difficulty", "type": "enum", "values": ["peaceful", "easy", "normal", "hard"], "default": "easy" },
+    "MODE":                 { "label": "Game mode", "type": "enum", "values": ["survival", "creative", "adventure", "spectator"], "default": "survival" },
+    "HARDCORE":             { "label": "Hardcore", "type": "bool", "default": "false" },
+    "MAX_PLAYERS":          { "label": "Max players", "type": "int", "min": 1, "max": 100, "default": "20" },
+    "PVP":                  { "label": "PvP", "type": "bool", "default": "true" },
+    "ALLOW_FLIGHT":         { "label": "Allow flight (needed by many mods)", "type": "bool", "default": "false" },
+    "VIEW_DISTANCE":        { "label": "View distance (chunks)", "type": "int", "min": 2, "max": 32, "default": "10" },
+    "SIMULATION_DISTANCE":  { "label": "Simulation distance (chunks)", "type": "int", "min": 2, "max": 32, "default": "10" },
+    "SPAWN_PROTECTION":     { "label": "Spawn protection radius", "type": "int", "min": 0, "max": 64, "default": "16" },
+    "ENABLE_COMMAND_BLOCK": { "label": "Command blocks", "type": "bool", "default": "false" },
+    "ONLINE_MODE":          { "label": "Online mode (verify Mojang accounts)", "type": "bool", "default": "true" },
+    "ENABLE_WHITELIST":     { "label": "Whitelist on", "type": "bool", "default": "false" },
+    "WHITELIST":            { "label": "Whitelisted players", "type": "list", "item": "^[A-Za-z0-9_]{3,16}$" },
+    "OPS":                  { "label": "Operators (admins)", "type": "list", "item": "^[A-Za-z0-9_]{3,16}$" },
+    "SEED":                 { "label": "World seed (new worlds only)", "type": "string", "max": 64, "pattern": "^[A-Za-z0-9_-]*$" },
+    "LEVEL_TYPE":           { "label": "World type (new worlds only)", "type": "enum", "values": ["minecraft:normal", "minecraft:flat", "minecraft:large_biomes", "minecraft:amplified"], "default": "minecraft:normal" }
+  },
+  "bedrock": {
+    "SERVER_NAME":          { "label": "Server name", "type": "string", "max": 60 },
+    "DIFFICULTY":           { "label": "Difficulty", "type": "enum", "values": ["peaceful", "easy", "normal", "hard"], "default": "easy" },
+    "GAMEMODE":             { "label": "Game mode", "type": "enum", "values": ["survival", "creative", "adventure"], "default": "survival" },
+    "MAX_PLAYERS":          { "label": "Max players", "type": "int", "min": 1, "max": 100, "default": "10" },
+    "ALLOW_CHEATS":         { "label": "Allow cheats", "type": "bool", "default": "false" },
+    "VIEW_DISTANCE":        { "label": "View distance (chunks)", "type": "int", "min": 5, "max": 96, "default": "32" },
+    "ONLINE_MODE":          { "label": "Online mode (Xbox accounts)", "type": "bool", "default": "true" },
+    "ALLOW_LIST":           { "label": "Allow list on", "type": "bool", "default": "false" },
+    "ALLOW_LIST_USERS":     { "label": "Allowed players (gamertags)", "type": "list", "item": "^[A-Za-z0-9 _-]{1,16}$" },
+    "LEVEL_SEED":           { "label": "World seed (new worlds only)", "type": "string", "max": 64, "pattern": "^-?[0-9]*$" },
+    "LEVEL_TYPE":           { "label": "World type (new worlds only)", "type": "enum", "values": ["DEFAULT", "FLAT"], "default": "DEFAULT" }
+  }
+}

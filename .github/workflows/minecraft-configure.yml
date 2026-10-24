@@ -1,0 +1,36 @@
+name: Configure Minecraft Server
+run-name: "configure ${{ inputs.server_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: 'Server name'
+        required: true
+        type: string
+      settings:
+        description: 'Settings as JSON, e.g. {"DIFFICULTY":"hard","MAX_PLAYERS":"10"}. See mc-deploy/settings-schema.json. Empty value = back to default.'
+        required: false
+        default: '{}'
+        type: string
+      memory:
+        description: 'New memory, e.g. 6G (blank = unchanged)'
+        required: false
+        type: string
+
+concurrency:
+  group: minecraft-${{ inputs.server_name }}
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure
+        env:
+          SERVER_NAME: ${{ inputs.server_name }}
+          SETTINGS: ${{ inputs.settings }}
+          MEMORY: ${{ inputs.memory }}
+        run: bash ./mc-deploy/scripts/configure-minecraft.sh
