@@ -19,6 +19,9 @@ EDITION=$(kubectl get namespace "$NAMESPACE" -o jsonpath='{.metadata.labels.mc-e
 PUBLIC=$(kubectl get namespace "$NAMESPACE" -o jsonpath='{.metadata.labels.mc-public}')
 PROTO=$([ "$EDITION" = bedrock ] && echo udp || echo tcp)
 
+# Patch replicas directly: the runner may patch Deployments but not use the /scale subresource.
+set_replicas() { kubectl patch deploy minecraft -n "$NAMESPACE" --type=merge -p "{\"spec\":{\"replicas\":$1}}"; }
+
 wait_up() {
   kubectl rollout status deploy/minecraft -n "$NAMESPACE" --timeout=20m ||
     { kubectl logs -n "$NAMESPACE" deploy/minecraft --tail=40 || true; die "the server didn't come back up"; }
@@ -27,14 +30,14 @@ wait_up() {
 case "$ACTION" in
   stop)
     echo "== Stopping '${SERVER_NAME}' (the server saves the world on the way down) =="
-    kubectl scale deploy/minecraft -n "$NAMESPACE" --replicas=0
+    set_replicas 0
     kubectl wait --for=delete pod -l app=minecraft -n "$NAMESPACE" --timeout=120s || true
     homelab-port close "$NAMESPACE" || echo "::warning::Couldn't close the router port."
     RESULT="stopped. World, port and settings are kept"
     ;;
   start)
     echo "== Starting '${SERVER_NAME}' =="
-    kubectl scale deploy/minecraft -n "$NAMESPACE" --replicas=1
+    set_replicas 1
     wait_up
     if [ "$PUBLIC" = true ]; then
       homelab-port open "$NAMESPACE" "$PROTO" "$PORT" "$LB_IP" "$PORT" || echo "::warning::Couldn't reopen the router port."
