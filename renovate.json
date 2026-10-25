@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "America/Chicago",
+  "schedule": ["before 6am on saturday"],
+  "prConcurrentLimit": 5,
+  "enabledManagers": ["custom.regex"],
+  "customManagers": [
+    {
+      "description": "Pinned images in the deploy scripts (e.g. mc-router)",
+      "customType": "regex",
+      "managerFilePatterns": ["/^mc-deploy/scripts/.+\\.sh$/"],
+      "matchStrings": ["image: (?<depName>[a-z0-9./-]+):(?<currentValue>\\d[^@\\s]*)@(?<currentDigest>sha256:[a-f0-9]+)"],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}
