@@ -29,6 +29,10 @@ if [ "$DELETE_WORLD" = true ] && [ -n "$PV" ]; then
   # its Longhorn volume, freeing the disk space.
   kubectl patch pv "$PV" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}' >/dev/null
   kubectl wait --for=delete "pv/$PV" --timeout=120s || echo "::warning::World volume ${PV} is still being deleted."
+  # So are the copies a world restore kept of the world before each restore.
+  for OLD in $(kubectl get pv -l "mc-world-replaced=${SERVER_NAME}" -o jsonpath='{.items[*].metadata.name}'); do
+    kubectl patch pv "$OLD" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}' >/dev/null
+  done
   WORLD_LINE="deleted"
 fi
 
