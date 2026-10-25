@@ -128,6 +128,63 @@ else
 fi
 LIMIT_GB=$((MEM_GB + 1))
 
+# Java servers get mc-router in front: while the server is stopped it answers the server list
+# with "sleeping", and a join asks the Minecraft panel to start it (the panel runs the Start
+# workflow). Bedrock is UDP, which mc-router can't proxy, so players reach it directly.
+FRONT=minecraft
+ROUTER_YAML=""
+if [ "$EDITION" = java ]; then
+  FRONT=mc-router
+  ROUTER_YAML="
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minecraft-backend
+  namespace: ${NAMESPACE}
+spec:
+  selector:
+    app: minecraft
+  ports:
+    - name: minecraft
+      port: 25565
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc-router
+  namespace: ${NAMESPACE}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc-router
+  template:
+    metadata:
+      labels:
+        app: mc-router
+    spec:
+      containers:
+        - name: mc-router
+          image: itzg/mc-router:1.47.2@sha256:64ae69eaa7a6800a79bbf962f027f4020878efa25183359115bc7f6ee569c36e
+          args:
+            - -port=25565
+            - -default=minecraft-backend:25565
+            - -auto-scale-webhook-url=http://mc-panel.panels.svc/api/wake/${SERVER_NAME}
+            # Java clients give up after 30s; the server takes about a minute, so they rejoin.
+            - -auto-scale-webhook-wake-timeout=25s
+            - -auto-scale-asleep-motd=§e${SERVER_NAME} is sleeping§r - join to wake it (about a minute)
+            - -auto-scale-loading-motd=§a${SERVER_NAME} is starting§r - try again in a minute
+          ports:
+            - containerPort: 25565
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi"
+fi
+
 # ---- Apply ----
 MANIFEST="/tmp/mc-${SERVER_NAME}.yaml"
 cat > "$MANIFEST" <<EOF
@@ -232,12 +289,13 @@ spec:
   type: LoadBalancer
   externalTrafficPolicy: Cluster
   selector:
-    app: minecraft
+    app: ${FRONT}
   ports:
     - name: minecraft
       port: ${PORT}
       targetPort: ${CONTAINER_PORT}
       protocol: ${PROTO^^}
+${ROUTER_YAML}
 EOF
 kubectl apply -f "$MANIFEST"
 
