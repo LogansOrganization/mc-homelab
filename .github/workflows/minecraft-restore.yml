@@ -1,0 +1,31 @@
+name: Restore Minecraft World
+run-name: "restore ${{ inputs.server_name }} to ${{ inputs.backup }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: 'Server name'
+        required: true
+        type: string
+      backup:
+        description: 'Backup name (backup-...), or latest. The panel lists them with dates.'
+        required: true
+        type: string
+        default: latest
+
+concurrency:
+  group: minecraft-${{ inputs.server_name }}
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: [self-hosted, homelab-k8s]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Restore
+        env:
+          SERVER_NAME: ${{ inputs.server_name }}
+          BACKUP: ${{ inputs.backup }}
+        run: bash ./mc-deploy/scripts/restore-minecraft.sh
