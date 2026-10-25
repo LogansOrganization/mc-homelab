@@ -52,6 +52,11 @@ on:
         required: false
         default: '{}'
         type: string
+      autostop_minutes:
+        description: 'Stop it after this many minutes with nobody on (0 = never)'
+        required: false
+        default: '30'
+        type: string
 
 # One deploy at a time, so two new servers never pick the same port.
 concurrency:
@@ -76,4 +81,5 @@ jobs:
           WORLD_SIZE: ${{ inputs.world_size }}
           PUBLIC: ${{ inputs.public }}
           SETTINGS: ${{ inputs.settings }}
+          AUTOSTOP_MINUTES: ${{ inputs.autostop_minutes }}
         run: bash ./scripts/deploy-minecraft.sh

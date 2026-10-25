@@ -20,6 +20,7 @@ MODPACK="${MODPACK:-}"
 MEMORY="${MEMORY:-4G}"
 WORLD_SIZE="${WORLD_SIZE:-10Gi}"
 PUBLIC="${PUBLIC:-true}"
+AUTOSTOP_MINUTES="${AUTOSTOP_MINUTES:-30}"
 
 LB_IP="192.168.10.242"
 JAVA_PORTS=$(seq 25565 25579)
@@ -32,6 +33,7 @@ SERVER_NAME=$(echo "$SERVER_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-
 [ -n "$SERVER_NAME" ] || die "server name is empty after cleaning it up"
 NAMESPACE="mc-${SERVER_NAME}"
 case "$EDITION" in java|bedrock) ;; *) die "edition must be java or bedrock" ;; esac
+[[ "$AUTOSTOP_MINUTES" =~ ^[0-9]+$ ]] && (( AUTOSTOP_MINUTES <= 1440 )) || die "autostop_minutes must be 0-1440"
 [[ "$MEMORY" =~ ^([0-9]+)[Gg]$ ]] || die "memory must look like 4G"
 MEM_GB="${BASH_REMATCH[1]}"
 
@@ -140,6 +142,8 @@ metadata:
     mc-type: "${TYPE}"
     mc-version: "${MC_VERSION}"
     mc-memory: "${MEM_GB}G"
+    # The Minecraft panel stops the server after this many idle minutes (0 = never).
+    mc-autostop: "${AUTOSTOP_MINUTES}"
     mc-mods: $(jq -Rn --arg v "$MODS" '$v')
     mc-modpack: $(jq -Rn --arg v "$MODPACK" '$v')
     mc-settings: $(jq -Rn --arg v "$SETTINGS_JSON" '$v')

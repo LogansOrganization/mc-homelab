@@ -46,6 +46,13 @@ if [ -n "$MEMORY" ]; then
   echo "  memory -> ${GB}G"
 fi
 
+AUTOSTOP_MINUTES="${AUTOSTOP_MINUTES:-}"
+if [ -n "$AUTOSTOP_MINUTES" ]; then
+  [[ "$AUTOSTOP_MINUTES" =~ ^[0-9]+$ ]] && (( AUTOSTOP_MINUTES <= 1440 )) || die "autostop_minutes must be 0-1440"
+  kubectl annotate namespace "$NAMESPACE" "mc-autostop=${AUTOSTOP_MINUTES}" --overwrite >/dev/null
+  echo "  auto-stop -> $([ "$AUTOSTOP_MINUTES" = 0 ] && echo never || echo "after ${AUTOSTOP_MINUTES} idle minutes")"
+fi
+
 [ ${#SET_ARGS[@]} -eq 0 ] || kubectl set env deploy/minecraft -n "$NAMESPACE" "${SET_ARGS[@]}"
 kubectl annotate namespace "$NAMESPACE" "mc-settings=${NEW}" --overwrite >/dev/null
 

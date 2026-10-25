@@ -17,6 +17,10 @@ on:
         description: 'New memory, e.g. 6G (blank = unchanged)'
         required: false
         type: string
+      autostop_minutes:
+        description: 'Stop after this many idle minutes, 0 = never (blank = unchanged)'
+        required: false
+        type: string
 
 concurrency:
   group: minecraft-${{ inputs.server_name }}
@@ -33,4 +37,5 @@ jobs:
           SERVER_NAME: ${{ inputs.server_name }}
           SETTINGS: ${{ inputs.settings }}
           MEMORY: ${{ inputs.memory }}
+          AUTOSTOP_MINUTES: ${{ inputs.autostop_minutes }}
         run: bash ./mc-deploy/scripts/configure-minecraft.sh
