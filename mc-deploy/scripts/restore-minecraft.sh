@@ -21,7 +21,7 @@ lh() {   # lh <GET|POST> <path> [json-body]: Longhorn's API (the runners may rea
   [ -n "${3:-}" ] && args+=(-d "$3")
   curl "${args[@]}" "${LONGHORN}$2"
 }
-[[ "$BACKUP" =~ ^(latest|backup-[a-z0-9]+)$ ]] || die "backup must be 'latest' or a backup name like backup-1a2b3c"
+[[ "$BACKUP" =~ ^(latest|[a-z0-9][a-z0-9-]{0,62})$ ]] || die "backup must be 'latest' or a Longhorn backup name"
 kubectl get namespace "$NAMESPACE" >/dev/null 2>&1 || die "no server named '${SERVER_NAME}'"
 EDITION=$(kubectl get namespace "$NAMESPACE" -o jsonpath='{.metadata.labels.mc-edition}')
 
