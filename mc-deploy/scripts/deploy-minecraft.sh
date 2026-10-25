@@ -194,6 +194,9 @@ metadata:
   name: ${NAMESPACE}
   labels:
     app: minecraft
+    # Public-facing, so no privileged containers or host access (Pod Security baseline).
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: baseline
     mc-edition: ${EDITION}
     mc-port: "${PORT}"
     mc-public: "${PUBLIC}"
