@@ -315,6 +315,12 @@ PUBLIC_LINE="not opened (public=false)"
 if [ "$PUBLIC" = true ]; then
   if homelab-port open "${NAMESPACE}" "$PROTO" "$PORT" "$LB_IP" "$PORT"; then
     PUBLIC_LINE="$(homelab-port public-ip):${PORT}"
+    # A name instead of an IP: Java finds the port by itself (SRV), Bedrock needs it typed.
+    if [ "$EDITION" = java ] && homelab-dns minecraft "$NAMESPACE" "$SERVER_NAME" "$PORT"; then
+      PUBLIC_LINE="${SERVER_NAME}.${HOMELAB_DOMAIN:-solarnebulae.com}"
+    elif [ "$EDITION" = bedrock ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+      PUBLIC_LINE="home.${HOMELAB_DOMAIN:-solarnebulae.com} port ${PORT}"
+    fi
   else
     PUBLIC_LINE="NOT reachable from the internet: the router port couldn't be opened (see log)"
     echo "::warning::Server is up on the LAN, but the router port couldn't be opened."

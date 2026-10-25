@@ -20,6 +20,7 @@ fi
 
 echo "== Tearing down '${SERVER_NAME}' =="
 homelab-port close "$NAMESPACE" || echo "::warning::Couldn't close the router port for ${NAMESPACE}; check homelab-port list."
+homelab-dns delete "$NAMESPACE" || echo "::warning::Couldn't remove the DNS name for ${NAMESPACE}; check homelab-dns list."
 kubectl delete namespace "$NAMESPACE" --ignore-not-found --timeout=180s
 
 WORLD_LINE="kept. Deploy the name '${SERVER_NAME}' again to get it back"
