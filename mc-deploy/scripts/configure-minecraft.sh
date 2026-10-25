@@ -3,13 +3,14 @@
 # running so they take effect. Settings are checked against settings-schema.json; an empty
 # value resets that setting to the server's default.
 #
-# Inputs (env): SERVER_NAME, SETTINGS (JSON object), MEMORY (optional, e.g. 6G)
+# Inputs (env): SERVER_NAME, SETTINGS (JSON object), MEMORY (optional, e.g. 6G), CPUS (optional, 1-4)
 set -euo pipefail
 
 SERVER_NAME="${SERVER_NAME:?SERVER_NAME is required}"
 SETTINGS="${SETTINGS:-}"
 [ -n "$SETTINGS" ] || SETTINGS='{}'
 MEMORY="${MEMORY:-}"
+CPUS="${CPUS:-}"
 SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 SERVER_NAME=$(echo "$SERVER_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' '-' | sed 's/^-*//;s/-*$//' | cut -c1-40)
 NAMESPACE="mc-${SERVER_NAME}"
@@ -44,6 +45,12 @@ if [ -n "$MEMORY" ]; then
   kubectl set resources deploy/minecraft -n "$NAMESPACE" --requests="memory=${GB}Gi" --limits="memory=$((GB + 1))Gi"
   kubectl annotate namespace "$NAMESPACE" "mc-memory=${GB}G" --overwrite >/dev/null
   echo "  memory -> ${GB}G"
+fi
+if [ -n "$CPUS" ]; then
+  [[ "$CPUS" =~ ^[1-4]$ ]] || die "cpus must be 1-4"
+  kubectl set resources deploy/minecraft -n "$NAMESPACE" --limits="cpu=${CPUS}"
+  kubectl annotate namespace "$NAMESPACE" "mc-cpus=${CPUS}" --overwrite >/dev/null
+  echo "  cpu limit -> ${CPUS} cores"
 fi
 
 AUTOSTOP_MINUTES="${AUTOSTOP_MINUTES:-}"

@@ -8,7 +8,7 @@
 # teardown keeps them, and deploying the same name again picks the old world back up.
 #
 # Inputs (env, from the workflow): SERVER_NAME, EDITION (java|bedrock), TYPE, MC_VERSION,
-# MODS, MODPACK, MEMORY, WORLD_SIZE, PUBLIC
+# MODS, MODPACK, MEMORY, CPUS, WORLD_SIZE, PUBLIC, SETTINGS, AUTOSTOP_MINUTES
 set -euo pipefail
 
 SERVER_NAME="${SERVER_NAME:?SERVER_NAME is required}"
@@ -21,6 +21,7 @@ MEMORY="${MEMORY:-4G}"
 WORLD_SIZE="${WORLD_SIZE:-10Gi}"
 PUBLIC="${PUBLIC:-true}"
 AUTOSTOP_MINUTES="${AUTOSTOP_MINUTES:-30}"
+CPUS="${CPUS:-4}"
 
 LB_IP="192.168.10.242"
 JAVA_PORTS=$(seq 25565 25579)
@@ -34,6 +35,7 @@ SERVER_NAME=$(echo "$SERVER_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-
 NAMESPACE="mc-${SERVER_NAME}"
 case "$EDITION" in java|bedrock) ;; *) die "edition must be java or bedrock" ;; esac
 [[ "$AUTOSTOP_MINUTES" =~ ^[0-9]+$ ]] && (( AUTOSTOP_MINUTES <= 1440 )) || die "autostop_minutes must be 0-1440"
+[[ "$CPUS" =~ ^[1-4]$ ]] || die "cpus must be 1-4"
 [[ "$MEMORY" =~ ^([0-9]+)[Gg]$ ]] || die "memory must look like 4G"
 MEM_GB="${BASH_REMATCH[1]}"
 
@@ -144,6 +146,7 @@ metadata:
     mc-memory: "${MEM_GB}G"
     # The Minecraft panel stops the server after this many idle minutes (0 = never).
     mc-autostop: "${AUTOSTOP_MINUTES}"
+    mc-cpus: "${CPUS}"
     mc-mods: $(jq -Rn --arg v "$MODS" '$v')
     mc-modpack: $(jq -Rn --arg v "$MODPACK" '$v')
     mc-settings: $(jq -Rn --arg v "$SETTINGS_JSON" '$v')
@@ -191,13 +194,13 @@ spec:
           volumeMounts:
             - name: world
               mountPath: /data
-          # Reserve half a core (the worker has 4), burst to 4 when it's busy.
+          # Reserve half a core, burst to CPUS (nodes have 4) when it's busy.
           resources:
             requests:
               cpu: 500m
               memory: "${MEM_GB}Gi"
             limits:
-              cpu: "4"
+              cpu: "${CPUS}"
               memory: "${LIMIT_GB}Gi"
           # Modpacks can take 10+ minutes to download on first boot.
           startupProbe:

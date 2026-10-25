@@ -39,6 +39,11 @@ on:
         description: 'Memory for the server, e.g. 4G'
         default: 4G
         type: string
+      cpus:
+        description: 'Most CPU cores it may use, 1-4'
+        required: false
+        default: '4'
+        type: string
       world_size:
         description: 'World storage, e.g. 10Gi (ignored when reusing a kept world)'
         default: 10Gi
@@ -78,6 +83,7 @@ jobs:
           MODS: ${{ inputs.mods }}
           MODPACK: ${{ inputs.modpack }}
           MEMORY: ${{ inputs.memory }}
+          CPUS: ${{ inputs.cpus }}
           WORLD_SIZE: ${{ inputs.world_size }}
           PUBLIC: ${{ inputs.public }}
           SETTINGS: ${{ inputs.settings }}
